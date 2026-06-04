@@ -55,8 +55,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--top-k", type=int, default=40)
     parser.add_argument("--show-neighbors", type=int, default=6)
     parser.add_argument("--temperature", type=float, default=0.06)
-    parser.add_argument("--min-score", type=int, default=65)
-    parser.add_argument("--min-top-similarity", type=float, default=0.62)
+    parser.add_argument("--min-score", type=int, default=58)
+    parser.add_argument("--min-top-similarity", type=float, default=0.45)
     parser.add_argument("--max-body-mb", type=float, default=8)
     return parser.parse_args()
 

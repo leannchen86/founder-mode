@@ -278,7 +278,7 @@ async function analyzeLiveFrame() {
     const response = await fetch(`${apiBase}/analyze`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imageDataUrl }),
+      body: JSON.stringify({ imageDataUrl, minScore: 58, minTopSimilarity: 0.45 }),
     });
     if (!response.ok) {
       throw new Error(`Oracle API returned ${response.status}`);
