@@ -183,7 +183,7 @@ Run the first multimodal Founder Mode oracle on an existing embedding row:
   --top-k 40
 ```
 
-Oracle output includes both a theatrical `founderModePercent` and an `auraMix` such as `44% founder / 39% VC / 17% big-tech`.
+Oracle output includes both a stricter theatrical `founderModePercent` and an `auraMix` such as `44% founder / 39% VC / 17% big-tech`. By default, scores below `65` or weak top visual matches return the product verdict `No archetype detected`.
 
 Or run it on a face image/crop:
 

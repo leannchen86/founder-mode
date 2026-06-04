@@ -50,6 +50,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--top-k", type=int, default=40)
     parser.add_argument("--show-neighbors", type=int, default=12)
     parser.add_argument("--temperature", type=float, default=0.06)
+    parser.add_argument("--min-score", type=int, default=65)
+    parser.add_argument("--min-top-similarity", type=float, default=0.62)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args()
@@ -178,7 +180,12 @@ def tag_ratios_from_link(link: dict[str, Any]) -> dict[str, float]:
     return {str(item.get("value", "")): min(1.0, int(item.get("count", 0)) / max_count) for item in tags}
 
 
-def compute_founder_mode(anchor_weights: dict[str, float], tag_weights: dict[str, float], mean_similarity: float) -> int:
+def compute_founder_mode(
+    anchor_weights: dict[str, float],
+    tag_weights: dict[str, float],
+    mean_similarity: float,
+    top_cluster_weight: float,
+) -> int:
     total_anchor = sum(anchor_weights.values()) or 1.0
     founder = anchor_weights.get("founders", 0.0) / total_anchor
     vc = anchor_weights.get("vcs", 0.0) / total_anchor
@@ -194,7 +201,15 @@ def compute_founder_mode(anchor_weights: dict[str, float], tag_weights: dict[str
         + 0.10 * tag_weights.get("finance", 0.0)
     ) / total_tags
     similarity_bonus = max(0.0, min(1.0, (mean_similarity - 0.55) / 0.25))
-    score = 24 + 55 * founder + 18 * vc + 8 * big_tech + 90 * tag_signal + 6 * similarity_bonus
+    score = (
+        14
+        + 58 * founder
+        + 18 * vc
+        + 5 * big_tech
+        + 125 * tag_signal
+        + 10 * similarity_bonus
+        + 10 * top_cluster_weight
+    )
     return int(max(1, min(99, round(score))))
 
 
@@ -230,6 +245,8 @@ def aggregate_oracle(
     clusters: dict[str, dict[str, Any]],
     show_neighbors: int,
     temperature: float,
+    min_score: int,
+    min_top_similarity: float,
 ) -> dict[str, Any]:
     weights = weighted_scores(similarities, temperature)
     label_weights: defaultdict[str, float] = defaultdict(float)
@@ -273,10 +290,51 @@ def aggregate_oracle(
         )
 
     top_tags = sorted_weights(tag_weights, limit=12)
-    founder_mode = compute_founder_mode(anchor_weights, tag_weights, mean_similarity=float(np.mean(similarities[: min(10, len(similarities))])))
+    top_cluster_weight = max(cluster_weights.values()) / max(float(sum(cluster_weights.values())), 1e-12)
+    top_similarity = float(similarities[0]) if len(similarities) else 0.0
+    mean_top_10_similarity = float(np.mean(similarities[: min(10, len(similarities))])) if len(similarities) else 0.0
+    founder_mode = compute_founder_mode(anchor_weights, tag_weights, mean_top_10_similarity, top_cluster_weight)
     aura_mix = aura_mix_percentages(anchor_weights)
+    no_archetype_detected = founder_mode < min_score or top_similarity < min_top_similarity
+    confidence = {
+        "topSimilarity": round(top_similarity, 4),
+        "meanTop10Similarity": round(mean_top_10_similarity, 4),
+        "topClusterWeight": round(top_cluster_weight, 4),
+        "minScore": min_score,
+        "minTopSimilarity": min_top_similarity,
+    }
+    abstain_reasons = []
+    if founder_mode < min_score:
+        abstain_reasons.append("score_below_threshold")
+    if top_similarity < min_top_similarity:
+        abstain_reasons.append("top_similarity_below_threshold")
+
+    if no_archetype_detected:
+        return {
+            "founderModePercent": founder_mode,
+            "noArchetypeDetected": True,
+            "verdict": "No archetype detected",
+            "auraMix": aura_mix,
+            "auraMixLine": aura_mix_line(aura_mix),
+            "primaryArchetype": {
+                "name": "No archetype detected",
+                "weight": 1.0,
+                "description": "Signal fell below the oracle threshold.",
+            },
+            "secondaryArchetypes": [],
+            "anchorWeights": sorted_weights(anchor_weights, limit=5),
+            "imageLabelWeights": sorted_weights(label_weights, limit=5),
+            "careerSignalWeights": top_tags,
+            "confidence": confidence,
+            "abstainReasons": abstain_reasons,
+            "fortune": "No archetype detected.",
+            "neighbors": neighbors,
+        }
+
     return {
         "founderModePercent": founder_mode,
+        "noArchetypeDetected": False,
+        "verdict": "Bay Area archetype detected",
         "auraMix": aura_mix,
         "auraMixLine": aura_mix_line(aura_mix),
         "primaryArchetype": top_clusters[0] if top_clusters else {},
@@ -284,6 +342,8 @@ def aggregate_oracle(
         "anchorWeights": sorted_weights(anchor_weights, limit=5),
         "imageLabelWeights": sorted_weights(label_weights, limit=5),
         "careerSignalWeights": top_tags,
+        "confidence": confidence,
+        "abstainReasons": [],
         "fortune": fortune_for(founder_mode, aura_mix, top_clusters, top_tags),
         "neighbors": neighbors,
     }
@@ -320,6 +380,8 @@ def main() -> None:
                 "queryImage": args.image,
                 "queryRowIndex": query_row_index,
                 "topK": args.top_k,
+                "minScore": args.min_score,
+                "minTopSimilarity": args.min_top_similarity,
                 "device": device,
                 "dryRun": args.dry_run,
             },
@@ -344,7 +406,16 @@ def main() -> None:
         raise SystemExit("Provide --image, --row-index, or --name.")
 
     neighbor_indices, similarities = top_neighbor_indices(payload["X"], query_vector, args.top_k, exclude_index)
-    oracle = aggregate_oracle(neighbor_indices, similarities, links, clusters, args.show_neighbors, args.temperature)
+    oracle = aggregate_oracle(
+        neighbor_indices,
+        similarities,
+        links,
+        clusters,
+        args.show_neighbors,
+        args.temperature,
+        args.min_score,
+        args.min_top_similarity,
+    )
     result = {
         "generatedAt": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "query": query_meta,
@@ -353,6 +424,8 @@ def main() -> None:
         "clusters": str(clusters_path),
         "topK": args.top_k,
         "temperature": args.temperature,
+        "minScore": args.min_score,
+        "minTopSimilarity": args.min_top_similarity,
         **oracle,
     }
 
@@ -365,6 +438,7 @@ def main() -> None:
             {
                 "wrote": str(output_path),
                 "founderModePercent": result["founderModePercent"],
+                "verdict": result["verdict"],
                 "primaryArchetype": result["primaryArchetype"].get("name", ""),
                 "fortune": result["fortune"],
             },

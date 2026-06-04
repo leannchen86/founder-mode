@@ -1,6 +1,6 @@
 const archetypes = [
   {
-    score: 72,
+    score: 71,
     title: "Finance/Operator Founder",
     anchors: [
       ["Founder", 44],
@@ -18,7 +18,7 @@ const archetypes = [
       'The oracle detects credible founder weather. Primary aura: finance/operator founder. Secondary aura: founder-investor hybrid. Likely fake backstory: survived a strategy offsite and now describes normal software as "agentic infrastructure."',
   },
   {
-    score: 69,
+    score: 68,
     title: "New York Finance To Sand Hill",
     anchors: [
       ["VC", 42],
@@ -36,7 +36,7 @@ const archetypes = [
       "The oracle sees imported capital markets energy trying to learn California adjectives. Primary aura: New York finance to Sand Hill. Secondary aura: operator-turned-investor. Likely fake backstory: once said liquidity, now says frontier.",
   },
   {
-    score: 65,
+    score: 66,
     title: "Infra Builder With A Stealth Deck",
     anchors: [
       ["Big-Tech", 55],
@@ -54,7 +54,7 @@ const archetypes = [
       "The oracle sees builder energy one coffee away from a pre-seed. Primary aura: infra builder with a stealth deck. Secondary aura: founder-curious platform person. Likely fake backstory: left a design review and accidentally incorporated.",
   },
   {
-    score: 84,
+    score: 78,
     title: "AI Research Founder",
     anchors: [
       ["Founder", 61],
@@ -72,7 +72,7 @@ const archetypes = [
       "The oracle sees a paper becoming a company before lunch. Primary aura: AI research founder. Secondary aura: technical AI/infrastructure investor. Likely fake backstory: owns one good demo, three eval spreadsheets, and a suspiciously confident roadmap.",
   },
   {
-    score: 58,
+    score: 65,
     title: "Founder-Curious Product Platform Person",
     anchors: [
       ["Big-Tech", 49],
@@ -88,6 +88,19 @@ const archetypes = [
     ],
     fortune:
       "The oracle sees product sense with a mild case of founder tabs open. Primary aura: founder-curious product platform person. Secondary aura: product-market operator. Likely fake backstory: has renamed a dashboard to a command center.",
+  },
+  {
+    score: 28,
+    title: "No archetype detected",
+    miss: true,
+    anchors: [
+      ["Founder", 14],
+      ["VC", 6],
+      ["Big-Tech", 9],
+    ],
+    signals: [],
+    neighbors: [],
+    fortune: "No archetype detected.",
   },
 ];
 
@@ -105,6 +118,7 @@ const archetypeTitle = document.querySelector("#archetypeTitle");
 const mixLine = document.querySelector("#mixLine");
 const auraGrid = document.querySelector("#auraGrid");
 const fortuneText = document.querySelector("#fortuneText");
+const fortuneBox = fortuneText.closest(".fortune");
 const neighborStrip = document.querySelector("#neighborStrip");
 
 let activeIndex = 0;
@@ -167,6 +181,7 @@ function drawSignalField() {
 }
 
 function renderOracle(oracle) {
+  const isMiss = Boolean(oracle.miss);
   const mixText = oracle.anchors
     .map(([label, value]) => `${value}% ${label === "VC" ? "VC" : label.toLowerCase()}`)
     .join(" / ");
@@ -176,15 +191,26 @@ function renderOracle(oracle) {
   archetypeTitle.textContent = oracle.title;
   mixLine.textContent = mixText;
   fortuneText.textContent = `Aura mix: ${mixText}. ${oracle.fortune}`;
-  signalState.textContent = oracle.signals[0]?.toUpperCase() || "ORACLE";
+  signalState.textContent = isMiss ? "NO ARCHETYPE" : oracle.signals[0]?.toUpperCase() || "ORACLE";
 
-  auraGrid.innerHTML = oracle.anchors
-    .map(([label, value]) => `<div class="aura"><strong>${value}%</strong><span>${label}</span></div>`)
-    .join("");
+  mixLine.hidden = isMiss;
+  auraGrid.hidden = isMiss;
+  fortuneBox.hidden = isMiss;
+  neighborStrip.hidden = isMiss;
 
-  neighborStrip.innerHTML = oracle.neighbors
-    .map(([name, note]) => `<div class="neighbor"><b>${name}</b><span>${note}</span></div>`)
-    .join("");
+  auraGrid.classList.toggle("miss", isMiss);
+  auraGrid.innerHTML = isMiss
+    ? ""
+    : oracle.signals
+        .slice(0, 4)
+        .map((signal) => `<div class="aura"><strong>${signal}</strong><span>signal</span></div>`)
+        .join("");
+
+  neighborStrip.innerHTML = isMiss
+    ? ""
+    : oracle.neighbors
+        .map(([name, note]) => `<div class="neighbor"><b>${name}</b><span>${note}</span></div>`)
+        .join("");
 }
 
 function chooseFromFrame() {

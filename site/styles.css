@@ -322,6 +322,10 @@ h2 {
   gap: 8px;
 }
 
+.aura-grid.miss {
+  grid-template-columns: 1fr;
+}
+
 .mix-line {
   padding: 12px 14px;
   border: 1px solid var(--line);
@@ -342,8 +346,10 @@ h2 {
 
 .aura strong {
   display: block;
-  font-size: 22px;
-  line-height: 1;
+  font-size: clamp(16px, 1.5vw, 21px);
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+  text-transform: capitalize;
 }
 
 .aura span {
