@@ -1,0 +1,16 @@
+# Local face-image cleaning, embedding, and evaluation stack.
+# Install into the repo-local Python 3.11 venv:
+#   python3.11 -m venv .venv
+#   .venv/bin/python -m pip install -r requirements-face-cleaning.txt
+numpy
+Pillow
+certifi
+opencv-python
+matplotlib
+torch
+torchvision
+timm
+transformers>=4.56.0
+open-clip-torch
+batch_face
+scikit-learn

@@ -1,0 +1,17 @@
+.env
+.env.local
+.venv/
+__pycache__/
+*.pyc
+data/raw/*.jsonl
+data/raw/*.json
+data/raw/*.csv
+data/images/
+data/embeddings/
+data/eval/
+data/text_embeddings/
+data/archetypes/
+data/oracle/
+data/processed/*.jsonl
+data/processed/*.json
+node_modules/

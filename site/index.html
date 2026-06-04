@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#111318" />
+    <title>Founder Mode</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="stage" aria-label="Founder Mode camera">
+        <div class="brand-row">
+          <div class="brand-mark">FM</div>
+          <div>
+            <h1>Founder Mode</h1>
+            <p>Bay Area oracle</p>
+          </div>
+        </div>
+
+        <div class="viewer" id="viewer">
+          <video id="camera" playsinline muted></video>
+          <canvas id="signalCanvas"></canvas>
+          <div class="scan-frame" id="scanFrame">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <div class="scan-line"></div>
+          </div>
+          <div class="signal-readout">
+            <span id="signalState">STANDBY</span>
+            <strong id="miniScore">--%</strong>
+          </div>
+        </div>
+
+        <div class="toolbar" aria-label="Oracle controls">
+          <button class="icon-button" id="cameraButton" type="button" aria-label="Open camera" title="Open camera">
+            <i data-lucide="camera"></i>
+          </button>
+          <button class="action-button" id="analyzeButton" type="button">
+            <i data-lucide="scan-face"></i>
+            <span>Read Aura</span>
+          </button>
+          <button class="icon-button" id="shuffleButton" type="button" aria-label="Shuffle oracle" title="Shuffle oracle">
+            <i data-lucide="refresh-cw"></i>
+          </button>
+        </div>
+      </section>
+
+      <aside class="oracle-panel" aria-label="Founder Mode readout">
+        <div class="score-block">
+          <div class="score-ring" id="scoreRing" style="--score: 72">
+            <span id="scoreValue">72</span>
+          </div>
+          <div>
+            <p class="eyebrow">Founder Mode</p>
+            <h2 id="archetypeTitle">Finance/Operator Founder</h2>
+          </div>
+        </div>
+
+        <p class="mix-line" id="mixLine">44% founder / 39% VC / 17% big-tech</p>
+
+        <div class="aura-grid" id="auraGrid"></div>
+
+        <div class="fortune">
+          <p id="fortuneText">
+            The oracle detects credible founder weather. Primary aura: finance/operator founder. Secondary aura:
+            founder-investor hybrid. Detected mythology: founder, VC, infrastructure, product.
+          </p>
+        </div>
+
+        <div class="neighbor-strip" id="neighborStrip" aria-label="Nearest archetype signals"></div>
+      </aside>
+    </main>
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
