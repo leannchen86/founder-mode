@@ -35,6 +35,11 @@ button {
   font: inherit;
 }
 
+button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .app-shell {
   min-height: 100vh;
   display: grid;

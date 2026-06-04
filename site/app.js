@@ -124,6 +124,9 @@ const neighborStrip = document.querySelector("#neighborStrip");
 let activeIndex = 0;
 let stream = null;
 let frameSignal = 0.5;
+let apiAvailable = false;
+
+const apiBase = new URLSearchParams(window.location.search).get("api") || "http://127.0.0.1:8787";
 
 function drawSignalField() {
   const ctx = signalCanvas.getContext("2d");
@@ -190,7 +193,7 @@ function renderOracle(oracle) {
   scoreRing.style.setProperty("--score", oracle.score);
   archetypeTitle.textContent = oracle.title;
   mixLine.textContent = mixText;
-  fortuneText.textContent = `Aura mix: ${mixText}. ${oracle.fortune}`;
+  fortuneText.textContent = oracle.fortune;
   signalState.textContent = isMiss ? "NO ARCHETYPE" : oracle.signals[0]?.toUpperCase() || "ORACLE";
 
   mixLine.hidden = isMiss;
@@ -217,6 +220,78 @@ function chooseFromFrame() {
   const frame = Math.abs(Math.sin(frameSignal * 11.7));
   activeIndex = Math.min(archetypes.length - 1, Math.floor(frame * archetypes.length));
   renderOracle(archetypes[activeIndex]);
+}
+
+function captureScanCrop() {
+  if (!stream || !camera.videoWidth || !camera.videoHeight) {
+    throw new Error("Camera is not ready");
+  }
+  const sourceSide = Math.floor(Math.min(camera.videoWidth, camera.videoHeight) * 0.78);
+  const sourceX = Math.floor((camera.videoWidth - sourceSide) / 2);
+  const sourceY = Math.floor((camera.videoHeight - sourceSide) / 2);
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(camera, sourceX, sourceY, sourceSide, sourceSide, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.9);
+}
+
+async function waitForCameraFrame() {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    if (camera.videoWidth && camera.videoHeight) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
+
+async function checkApi() {
+  try {
+    const response = await fetch(`${apiBase}/health`, { cache: "no-store" });
+    apiAvailable = response.ok;
+    signalState.textContent = apiAvailable ? "ML READY" : "STANDBY";
+  } catch {
+    apiAvailable = false;
+  }
+}
+
+async function analyzeLiveFrame() {
+  if (!apiAvailable) {
+    await checkApi();
+  }
+  if (!apiAvailable) {
+    chooseFromFrame();
+    signalState.textContent = "DEMO";
+    return;
+  }
+  if (!stream) {
+    await openCamera();
+  }
+  await waitForCameraFrame();
+
+  const previousState = signalState.textContent;
+  signalState.textContent = "ANALYZING";
+  analyzeButton.disabled = true;
+  try {
+    const imageDataUrl = captureScanCrop();
+    const response = await fetch(`${apiBase}/analyze`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageDataUrl }),
+    });
+    if (!response.ok) {
+      throw new Error(`Oracle API returned ${response.status}`);
+    }
+    const payload = await response.json();
+    renderOracle(payload.oracle);
+    signalState.textContent = payload.oracle.miss ? "NO ARCHETYPE" : "ML";
+  } catch {
+    signalState.textContent = previousState || "LIVE";
+    chooseFromFrame();
+  } finally {
+    analyzeButton.disabled = false;
+  }
 }
 
 async function openCamera() {
@@ -262,7 +337,11 @@ cameraButton.addEventListener("click", () => {
   });
 });
 
-analyzeButton.addEventListener("click", chooseFromFrame);
+analyzeButton.addEventListener("click", () => {
+  analyzeLiveFrame().catch(() => {
+    chooseFromFrame();
+  });
+});
 
 shuffleButton.addEventListener("click", () => {
   activeIndex = (activeIndex + 1) % archetypes.length;
@@ -272,6 +351,7 @@ shuffleButton.addEventListener("click", () => {
 window.addEventListener("resize", drawSignalField);
 drawSignalField();
 renderOracle(archetypes[0]);
+checkApi();
 
 if (window.lucide) {
   window.lucide.createIcons();

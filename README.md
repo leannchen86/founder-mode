@@ -12,6 +12,14 @@ Run it locally:
 python3 -m http.server 4173 --directory site
 ```
 
+Run the real local ML API in a second terminal:
+
+```bash
+.venv/bin/python scripts/serve-founder-oracle.py
+```
+
+With that API running, the static page sends the live camera crop to `http://127.0.0.1:8787/analyze` and renders the real MetaCLIP nearest-neighbor oracle. Without the API, it falls back to the canned demo readings. A deployed or tunneled API can be selected with `?api=https://your-api-host`.
+
 After pushing to `main`, `.github/workflows/deploy-pages.yml` uploads `site/` and deploys it with GitHub Pages Actions. The expected project URL is:
 
 ```text
